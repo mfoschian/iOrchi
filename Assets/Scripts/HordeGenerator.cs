@@ -10,7 +10,7 @@ public class HordeGenerator : MonoBehaviour
 
     void Start()
     {
-        generate(10);
+        generate(hordeCount);
     }
 
 	public GameObject generateEnemy() {

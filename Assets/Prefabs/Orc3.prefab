@@ -1634,7 +1634,6 @@ GameObject:
   - component: {fileID: 6619289152451762881}
   - component: {fileID: 6619289152451762880}
   - component: {fileID: 6619289152451762882}
-  - component: {fileID: 6619289152451762943}
   - component: {fileID: 6619289152451762883}
   - component: {fileID: 3116351066418040365}
   m_Layer: 0
@@ -1702,7 +1701,7 @@ NavMeshAgent:
   m_Acceleration: 8
   avoidancePriority: 50
   m_AngularSpeed: 120
-  m_StoppingDistance: 0
+  m_StoppingDistance: 0.7
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
@@ -1723,20 +1722,6 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 0.9204979, y: 0.08243669, z: 0.65547943}
   m_Center: {x: -0.06625366, y: 0.031495463, z: 0.17226028}
---- !u!136 &6619289152451762943
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6619289152451762941}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 0
-  m_Radius: 0.18197918
-  m_Height: 0.562726
-  m_Direction: 1
-  m_Center: {x: -0.059628487, y: 2.590516, z: 0.5101547}
 --- !u!95 &6619289152451762883
 Animator:
   serializedVersion: 3
