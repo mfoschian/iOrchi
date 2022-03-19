@@ -13,6 +13,9 @@ namespace iOrchi {
 		bool landed = false;
 		public bool isLanded() { return landed; }
 
+		Vector3 startPoint;
+		PlayerController owner;
+
 	    Vector3 lastPosition = Vector3.zero;
 	    private Rigidbody rb;
 	    // public Collider sphereCollider;
@@ -69,14 +72,21 @@ namespace iOrchi {
 				if( hitInfo.collider != null ) {
 					hitted = hitInfo.collider.gameObject;
 					if( hitted != null ) {
-						// EnemyNavAgent enemy = hitted.GetComponent<EnemyNavAgent>();
 						EnemyNavAgent enemy = hitted.GetComponentInParent<EnemyNavAgent>();
 						if( enemy != null ) {
 							applyForce = false;
 							enemy.hit(damage);
 						}
+						// Inform Player of launch result
+						if( owner != null ) {
+							float distance = Vector3.Distance( transform.position, startPoint );
+							owner.enemyHitted(distance, enemy);
+						}
+
+						// Attach arrow to hitted body
 						transform.parent = hitted.transform;
 						StopMotion();
+
 					}
 				}
 
@@ -101,10 +111,13 @@ namespace iOrchi {
 	        //ArrowSounds(hitClip, 1.5f, 2, .8f, -2);
 	    }
 
-	    public void Release(float value)
+	    public void Release(float value, PlayerController p = null)
 	    {
 	        inAir = true;
 			transform.parent = null;
+			startPoint = transform.position;
+			owner = p;
+
 	        SetPhysics(true);
 	        MaskAndFire(value);
 	        StartCoroutine(RotateWithVelocity());

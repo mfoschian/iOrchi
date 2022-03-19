@@ -8,14 +8,15 @@ public class PlayerController : MonoBehaviour
 	public Transform arrowStartPosition;
 	[Range(0,1)] public float arrowPower = 0.0f;
 	public float arrowLoadTime = 2.0f;
+	public float rechargeTime = 1.0f;
 
-	// Camera m_Camera = null;
+	public string playerName = "Player 1";
 
 	public enum ArrowStatus {
 		noArrow,
 		armed,
 		starting,
-		flying,
+		charging,
 		landed
 	}
 
@@ -23,6 +24,11 @@ public class PlayerController : MonoBehaviour
 	ArrowStatus arrowStatus = ArrowStatus.noArrow;
 	float bowExtension = 0.5f;
 	float timeT = 0.0f;
+
+	public void enemyHitted(float distance, EnemyNavAgent enemy) {
+		Debug.Log( "Enemy hitted by " + playerName + " from " + distance + " meters");
+	}
+
 
 	void Start() {
 		// FPSController c = GetComponent<FPSController>();
@@ -42,8 +48,13 @@ public class PlayerController : MonoBehaviour
 	}
 
 	void fireArrow() {
-		arrowStatus = ArrowStatus.flying;
+		arrowStatus = ArrowStatus.charging;
 		arrow.Release(arrowPower);
+		Invoke("recharged", rechargeTime);
+	}
+
+	void recharged() {
+		arrowStatus = ArrowStatus.noArrow;
 	}
 
     void Update()
@@ -82,7 +93,7 @@ public class PlayerController : MonoBehaviour
 		if( arrowStatus == ArrowStatus.starting ) {
 			fireArrow();
 		}
-		else if( arrowStatus == ArrowStatus.flying && arrow.isLanded() )
-			arrowStatus = ArrowStatus.noArrow;
+		// else if( arrowStatus == ArrowStatus.flying && arrow.isLanded() )
+		// 	arrowStatus = ArrowStatus.noArrow;
 	}
 }
