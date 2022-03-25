@@ -17,6 +17,10 @@ public class GameLogic : MonoBehaviour
 		m_hordeGenerator = GetComponent<HordeGenerator>();
 		m_brain = GetComponent<EnemyBrain>();
 
+		Invoke("createHorde", 5f);
+		Invoke("startHorde", 6f);
+
+
 		Debug.Log("Game Started");
     }
 
@@ -34,15 +38,15 @@ public class GameLogic : MonoBehaviour
 
 	public void Update() {
 
-		if( Input.GetKeyDown(KeyCode.Backspace) ) {
-			if( status == 0 ) {
-				status++;
-				createHorde();
-			}
-			else if( status == 1 ) {
-				status++;
-				startHorde();
-			}
-		}
+		// if( Input.GetKeyDown(KeyCode.Backspace) ) {
+		// 	if( status == 0 ) {
+		// 		status++;
+		// 		createHorde();
+		// 	}
+		// 	else if( status == 1 ) {
+		// 		status++;
+		// 		startHorde();
+		// 	}
+		// }
 	}
 }

@@ -1567,8 +1567,9 @@ GameObject:
   - component: {fileID: 1874021698}
   - component: {fileID: 1874021697}
   - component: {fileID: 1874021699}
+  - component: {fileID: 1874021700}
   m_Layer: 0
-  m_Name: f
+  m_Name: barrier
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1651,6 +1652,19 @@ CapsuleCollider:
   m_Height: 3.130417
   m_Direction: 1
   m_Center: {x: 0.0000003065382, y: -0.3510144, z: -0.0000001021794}
+--- !u!114 &1874021700
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1874021695}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4af058d2f4ff95545a5d4fd4ac0870b0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  effect: {fileID: 6376102553951395356, guid: 2bf464d209b460c489786933d6a03cad, type: 3}
 --- !u!1 &1942277987
 GameObject:
   m_ObjectHideFlags: 0
