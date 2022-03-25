@@ -3,22 +3,40 @@ using UnityEngine;
 using UnityEngine.AI;
 using System.Collections.Generic;
 
-public class EnemyBrain : MonoBehaviour {
+public class EnemyBrain : MonoBehaviour, EnemyNavAgent.IEnemyObserver {
 
     protected List<EnemyNavAgent> agents = new List<EnemyNavAgent>();
-    
-	virtual public void add( EnemyNavAgent a ) {
-		agents.Add(a);
+
+	virtual public void add(EnemyNavAgent ag) {
+		if( ag == null ) return;
+
+		agents.Add( ag );
+		ag.setObserver( this );
 	}
 
-	public void setDestination(Vector3 destination) {
-		foreach (EnemyNavAgent a in agents) {
-			a.setDestination(destination);
+	virtual public void addHorde( List<GameObject> enemies ) {
+		foreach( GameObject enemy in enemies ) {
+			EnemyNavAgent ag = enemy.GetComponent<EnemyNavAgent>();
+			add( ag );
 		}
-    }
+	}
+
+	virtual public void startHorde() {
+	}
 
 	public void remove(EnemyNavAgent a) {
 		agents.Remove(a);
+		a.setObserver(null);
 	}
 
+	virtual public void targetReached( Vector3 target, EnemyNavAgent agent ) {
+		Debug.Log( "Enemy " + agent.name + " reached the target" );
+	}
+
+	virtual public void enemyKilled( EnemyNavAgent enemy ) {
+		remove(enemy);
+		if( agents.Count == 0 ) {
+			Debug.Log( "All enemies killed" );
+		}
+	}
 }

@@ -10,7 +10,9 @@ public class MouseDrivenEnemyBrain : EnemyBrain {
             RaycastHit hit;
             
             if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 100)) {
-				setDestination( hit.point );
+				foreach( EnemyNavAgent ag in agents ) {
+					ag.setDestination( hit.point );
+				}
             }
         }
     }

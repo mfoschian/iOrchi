@@ -8,28 +8,34 @@ public class EnemyNavAgent : MonoBehaviour
 	public int vitalPoints = 10;
 	public float targetTolerance = 7;
 
-	private EnemyBrain brain;
+	public interface IEnemyObserver	{
+		void enemyKilled(EnemyNavAgent enemy);
+		void targetReached( Vector3 target, EnemyNavAgent agent );
+	}
+
+	private IEnemyObserver observer;
 	private NavMeshAgent agent;
 	private Animator animController;
 	private Rigidbody rb;
+	private bool startWalking = false;
 
     void Start() {
 		animController = GetComponent<Animator>();
 		rb = GetComponent<Rigidbody>();
 		if( animController ) animController.SetInteger( "vitalPoints", vitalPoints );
 		agent = GetComponent<NavMeshAgent>();
-		GameObject g = GameObject.Find("EnemyBrain");
-		if( g != null ) {
-			brain = g.GetComponent<EnemyBrain>();
-			if( brain != null && agent != null )
-				brain.add(this);
-		}
     }
+
+	public void setObserver(IEnemyObserver obs) {
+		observer = obs;
+	}
 
 	virtual public void setDestination( Vector3 destination ) {
 		if( agent != null ) {
 			SetPhysics(false);
 			agent.destination = destination;
+			agent.enabled = true;
+			startWalking = true;
 			// if( animController ) animController.SetBool("walking", true);
 		}
 	}
@@ -48,8 +54,8 @@ public class EnemyNavAgent : MonoBehaviour
 			vitalPoints = 0;
 		
 		if( vitalPoints == 0 ) {
-			if( brain != null ) {
-				brain.remove(this);
+			if( observer != null ) {
+				observer.enemyKilled(this);
 				stopMoving();
 				SetPhysics(true);
 			}
@@ -58,6 +64,9 @@ public class EnemyNavAgent : MonoBehaviour
 	}
 
 	virtual public void targetReached() {
+		if( observer != null && agent != null ) {
+			observer.targetReached( agent.destination, this );
+		}
 		stopMoving();
 		if( animController ) {
 			animController.SetBool("walking", false);
@@ -70,11 +79,14 @@ public class EnemyNavAgent : MonoBehaviour
 	private void FixedUpdate() {
 		if( animController ) animController.SetInteger("vitalPoints", vitalPoints);
 		if( agent ) {
-			if( agent.hasPath && agent.remainingDistance < targetTolerance ) {
-				targetReached();
-			}
-			else {
-				if( animController ) animController.SetBool("walking", agent.hasPath);
+			if( agent.hasPath ) {
+				if( agent.remainingDistance < targetTolerance ) {
+					targetReached();
+				}
+				else if( startWalking == true && animController != null ) {
+					startWalking = false;
+					animController.SetBool("walking", true );
+				}
 			}
 		}
 	}
