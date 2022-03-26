@@ -10,6 +10,9 @@ public class PlayerController : MonoBehaviour
 	public float arrowLoadTime = 2.0f;
 	public float rechargeTime = 1.0f;
 
+	public Camera[] cameras;
+	private int m_activeCamera = 0;
+
 	public string playerName = "Player 1";
 
 	public enum ArrowStatus {
@@ -34,6 +37,24 @@ public class PlayerController : MonoBehaviour
 		// FPSController c = GetComponent<FPSController>();
 		// if( c != null )
 		// 	m_Camera = c.playerCamera;
+		// m_cameras = GetComponentsInChildren<Camera>(true);
+		// for( int i=0; i<m_cameras.Length; i++ ) {
+		// 	Camera c = m_cameras[i];
+		// 	if( c.gameObject.isActiveAndEnabled )
+		// 		m_activeCamera = i;
+		// }
+	}
+
+	void nextCamera() {
+		if( cameras.Length < 2 )
+			return;
+
+		int ix = m_activeCamera + 1;
+		if( ix >= cameras.Length ) ix = 0;
+
+		cameras[m_activeCamera].gameObject.SetActive(false);
+		cameras[ix].gameObject.SetActive(true);
+		m_activeCamera = ix;
 	}
 
 	void armArrow() {
@@ -80,6 +101,10 @@ public class PlayerController : MonoBehaviour
 				// pos.z = arrowStartPosition.position.z - (perc * bowExtension);
 				arrow.transform.position = pos;
 			}
+		}
+
+		if( Input.GetKeyDown( KeyCode.Backspace ) ) {
+			nextCamera();
 		}
     }
 
