@@ -2063,6 +2063,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemiesPrefabs:
   - {fileID: 6619289152451762941, guid: 5c2c00b1633c963428a03d9f973f39ef, type: 3}
+  - {fileID: 8958783754078365942, guid: 46fb937b8f52aae438837e2b30dfd6af, type: 3}
   hordeCount: 10
   positionSpread: 15
   startPoint: {fileID: 1989784674}
