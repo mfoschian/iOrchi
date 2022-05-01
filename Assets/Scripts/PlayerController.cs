@@ -1,9 +1,33 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
 
-public class PlayerController : MonoBehaviour
+[RequireComponent(typeof(CharacterController))]
+public class PlayerController : NetworkBehaviour
 {
+
+	public float walkingSpeed = 7.5f;
+	public float runningSpeed = 11.5f;
+	public float jumpSpeed = 8.0f;
+	public float gravity = 20.0f;
+	public Camera playerCamera;
+	public float lookSpeed = 2.0f;
+	public float lookXLimit = 45.0f;
+	public bool canJump = true;
+
+	CharacterController characterController;
+	Vector3 moveDirection = Vector3.zero;
+	float rotationX = 0;
+
+	[HideInInspector]
+	public bool canMove = true;
+
+
+
+
+
+
 	public GameObject arrowPrefab;
 	public Transform arrowStartPosition;
 	[Range(0,1)] public float arrowPower = 0.0f;
@@ -33,16 +57,28 @@ public class PlayerController : MonoBehaviour
 	}
 
 
+	public override void OnNetworkSpawn() {
+		Debug.Log( "Player spawned");
+		PlayerManager.addPlayer( this );
+	}
+
 	void Start() {
-		// FPSController c = GetComponent<FPSController>();
-		// if( c != null )
-		// 	m_Camera = c.playerCamera;
-		// m_cameras = GetComponentsInChildren<Camera>(true);
-		// for( int i=0; i<m_cameras.Length; i++ ) {
-		// 	Camera c = m_cameras[i];
-		// 	if( c.gameObject.isActiveAndEnabled )
-		// 		m_activeCamera = i;
-		// }
+
+		if( cameras.Length == 0 ) {
+			// Add embedded camera
+			cameras = GetComponentsInChildren<Camera>(true);
+			if( cameras.Length > 0 ) {
+				Camera cam = cameras[0];
+				cam.gameObject.SetActive(true);
+			}
+		}
+
+		characterController = GetComponent<CharacterController>();
+
+		// Lock cursor
+		Cursor.lockState = CursorLockMode.Locked;
+		Cursor.visible = false;
+
 	}
 
 	void nextCamera() {
@@ -106,6 +142,45 @@ public class PlayerController : MonoBehaviour
 		if( Input.GetKeyDown( KeyCode.Backspace ) ) {
 			nextCamera();
 		}
+
+        // We are grounded, so recalculate move direction based on axes
+        Vector3 forward = transform.TransformDirection(Vector3.forward);
+        Vector3 right = transform.TransformDirection(Vector3.right);
+        // Press Left Shift to run
+        bool isRunning = Input.GetKey(KeyCode.LeftShift);
+        float curSpeedX = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Vertical") : 0;
+        float curSpeedY = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Horizontal") : 0;
+        float movementDirectionY = moveDirection.y;
+        moveDirection = (forward * curSpeedX) + (right * curSpeedY);
+
+        if (canJump && Input.GetButton("Jump") && canMove && characterController.isGrounded)
+        {
+            moveDirection.y = jumpSpeed;
+        }
+        else
+        {
+            moveDirection.y = movementDirectionY;
+        }
+
+        // Apply gravity. Gravity is multiplied by deltaTime twice (once here, and once below
+        // when the moveDirection is multiplied by deltaTime). This is because gravity should be applied
+        // as an acceleration (ms^-2)
+        if (!characterController.isGrounded)
+        {
+            moveDirection.y -= gravity * Time.deltaTime;
+        }
+
+        // Move the controller
+        characterController.Move(moveDirection * Time.deltaTime);
+
+        // Player and Camera rotation
+        if (canMove)
+        {
+            rotationX += -Input.GetAxis("Mouse Y") * lookSpeed;
+            rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
+            playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
+            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
+        }
     }
 
 	void AfterUpdate() {

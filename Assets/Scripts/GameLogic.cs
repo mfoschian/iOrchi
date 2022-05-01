@@ -2,11 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GameLogic : MonoBehaviour, EnemyBrain.IListener
+public class GameLogic : MonoBehaviour, EnemyBrain.IListener, PlayerManager.IListener
 {
 	private HordeGenerator m_hordeGenerator;
 	private EnemyBrain m_brain;
+	private PlayerManager m_playerManager;
 	private IHUD m_hud;
+
+	public Camera lobbyCamera = null;
 
 	// private int status = 0;
 
@@ -18,6 +21,13 @@ public class GameLogic : MonoBehaviour, EnemyBrain.IListener
 	public GameObject hud;
 	public int enemiesToLose = 7;
 
+	void startRound() {
+		const float start_delay = 5f;
+		Debug.Log("Starting Game Round in " + start_delay);
+		Invoke("createHorde", start_delay);
+		Invoke("startHorde", start_delay + 1);
+	}
+
     // Start is called before the first frame update
     void Start()
     {
@@ -26,14 +36,14 @@ public class GameLogic : MonoBehaviour, EnemyBrain.IListener
 		if( hud != null ) {
 			m_hud = hud.GetComponent<IHUD>();
 		}
+		m_playerManager = GetComponent<PlayerManager>();
+		if( m_playerManager != null )
+			m_playerManager.listener = this;
+
 		m_hordeGenerator = GetComponent<HordeGenerator>();
 		m_brain = GetComponent<EnemyBrain>();
 		if( m_brain != null )
 			m_brain.listener = this;
-
-		Invoke("createHorde", 5f);
-		Invoke("startHorde", 6f);
-
 
 		Debug.Log("Game Started");
     }
@@ -75,6 +85,13 @@ public class GameLogic : MonoBehaviour, EnemyBrain.IListener
 		if( enemiesOnTarget >= enemiesToLose ) {
 			Debug.Log( "Game Over" );
 		}
+	}
+
+	public void onPlayersAvailable() {
+		if( lobbyCamera != null ) {
+			lobbyCamera.gameObject.SetActive(false);
+		}
+		startRound();
 	}
 
 	public void Update() {
