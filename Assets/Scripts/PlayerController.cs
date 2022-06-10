@@ -64,12 +64,19 @@ public class PlayerController : NetworkBehaviour
 
 	void Start() {
 
+		if( ! IsLocalPlayer )
+			return;
+
 		if( cameras.Length == 0 ) {
 			// Add embedded camera
 			cameras = GetComponentsInChildren<Camera>(true);
 			if( cameras.Length > 0 ) {
 				Camera cam = cameras[0];
+				cam.enabled = true;
 				cam.gameObject.SetActive(true);
+				// AudioListener l = cam.GetComponent<AudioListener>();
+				// if( l != null )
+				// 	l.SetActive(true);
 			}
 		}
 
@@ -82,6 +89,9 @@ public class PlayerController : NetworkBehaviour
 	}
 
 	void nextCamera() {
+		if( ! IsLocalPlayer )
+			return;
+
 		if( cameras.Length < 2 )
 			return;
 
@@ -116,6 +126,8 @@ public class PlayerController : NetworkBehaviour
 
     void Update()
     {
+		if( !IsLocalPlayer ) return;
+
 		if( arrowStatus == ArrowStatus.noArrow ) {
 			armArrow();
 		}

@@ -1,9 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
 
-public class GameLogic : MonoBehaviour, EnemyBrain.IListener, PlayerManager.IListener
+public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.IListener, MainMenu.Listener
 {
+	public MainMenu Menu;
+	public NetworkManager Net;
+
 	private HordeGenerator m_hordeGenerator;
 	private EnemyBrain m_brain;
 	private PlayerManager m_playerManager;
@@ -22,6 +26,10 @@ public class GameLogic : MonoBehaviour, EnemyBrain.IListener, PlayerManager.ILis
 	public int enemiesToLose = 7;
 
 	void startRound() {
+
+		if( !NetworkManager.Singleton.IsServer ) 
+			return;
+
 		const float start_delay = 5f;
 		Debug.Log("Starting Game Round in " + start_delay);
 		Invoke("createHorde", start_delay);
@@ -29,12 +37,24 @@ public class GameLogic : MonoBehaviour, EnemyBrain.IListener, PlayerManager.ILis
 	}
 
     // Start is called before the first frame update
-    void Start()
+    void Start() {
+		if( Menu != null ) {
+			// Menu.SetActive(true);
+			Menu.setListener(this);
+			if( hud != null )
+				hud.SetActive(false);
+		}
+	}
+    void StartGame()
     {
 		Debug.Log("Starting Game");
 
+		if( Menu != null ) {
+			Menu.gameObject.SetActive(false);
+		}
 		if( hud != null ) {
 			m_hud = hud.GetComponent<IHUD>();
+			hud.SetActive(true);
 		}
 		m_playerManager = GetComponent<PlayerManager>();
 		if( m_playerManager != null )
@@ -87,11 +107,38 @@ public class GameLogic : MonoBehaviour, EnemyBrain.IListener, PlayerManager.ILis
 		}
 	}
 
-	public void onPlayersAvailable() {
+	private void disableLobbyCam() {
 		if( lobbyCamera != null ) {
 			lobbyCamera.gameObject.SetActive(false);
 		}
+	}
+
+	public void onPlayersAvailable() {
 		startRound();
+	}
+
+	public void onStart(string mode) {
+		if( mode == "Server") {
+			// TODO: start network server
+		}
+		else if( mode == "Host") {
+			StartGame();
+
+			if( Net != null ) {
+				bool ok = Net.StartHost();
+				if( ok )
+					disableLobbyCam();
+			}
+		}
+		else if( mode == "Client") {
+			StartGame();
+
+			if( Net != null ) {
+				bool ok = Net.StartClient();
+				if( ok )
+					disableLobbyCam();
+			}
+		}
 	}
 
 	public void Update() {

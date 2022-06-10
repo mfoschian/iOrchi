@@ -1,8 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
 
-public class PlayerManager : MonoBehaviour
+public class PlayerManager : NetworkBehaviour
 {
 	public interface IListener {
 		void onPlayersAvailable();
@@ -36,7 +37,16 @@ public class PlayerManager : MonoBehaviour
 		return res;
 	}
 
+    // [ServerRpc]
+    // void SubmitPositionRequestServerRpc(ServerRpcParams rpcParams = default)
+    // {
+    //     Position.Value = GetRandomPositionOnPlane();
+    // }
+
 	public static void addPlayer( PlayerController p ) {
+		if( !NetworkManager.Singleton.IsServer )
+			return;
+
 		Instance._addPlayer( p );
 	}
 
