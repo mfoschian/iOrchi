@@ -50,6 +50,8 @@ public class PlayerController : NetworkBehaviour
 
 	void Start() {
 
+		characterController = GetComponent<CharacterController>();
+
 		if( ! IsLocalPlayer )
 			return;
 
@@ -65,8 +67,6 @@ public class PlayerController : NetworkBehaviour
 				// 	l.SetActive(true);
 			}
 		}
-
-		characterController = GetComponent<CharacterController>();
 
 		// Lock cursor
 		Cursor.lockState = CursorLockMode.Locked;
@@ -116,21 +116,27 @@ public class PlayerController : NetworkBehaviour
 			ClientUpdate();
 
 		if( IsServer )
-			ServerUpdate();
+			MovePlayer();
+		else if( IsOwner )
+			updatePlayerServerRpc( moveDirection, moveRotation );
 	}
 
 	[ServerRpc]
 	void updatePlayerServerRpc(Vector3 pos, Quaternion rot ) {
+		moveDirection = pos;
+		moveRotation = rot;
+		MovePlayer();
+	}
+
+	void MovePlayer()
+	{
+		if( characterController == null )
+			return;
+
 		characterController.Move(moveDirection * Time.deltaTime);
 
 		if( moveRotation != null )
-			transform.rotation *= moveRotation;
-
-	}
-
-	void ServerUpdate()
-	{
-		updatePlayerServerRpc( moveDirection, moveRotation );
+			transform.rotation *= moveRotation;		
 	}
 
 	void ClientUpdate()
