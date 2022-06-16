@@ -36,12 +36,23 @@ public class PlayerController : NetworkBehaviour
 
 	iOrchi.Weapon weapon = null;
 	bool weaponReleased = false;
-	
+
+	private NetworkVariable<Vector3> ownerPos = new NetworkVariable<Vector3>(
+		default,
+		NetworkVariableBase.DefaultReadPerm, // Everyone
+		NetworkVariableWritePermission.Owner
+	);
+	private NetworkVariable<Quaternion> ownerRot = new NetworkVariable<Quaternion>(
+		default,
+		NetworkVariableBase.DefaultReadPerm, // Everyone
+		NetworkVariableWritePermission.Owner
+	);
+
+
 
 	public void enemyHitted(float distance, EnemyNavAgent enemy) {
 		Debug.Log( "Enemy hitted by " + playerName + " from " + distance + " meters");
 	}
-
 
 	public override void OnNetworkSpawn() {
 		Debug.Log( "Player spawned");
@@ -110,22 +121,25 @@ public class PlayerController : NetworkBehaviour
 		if( weapon == null && weaponPrefab != null ) {
 			armWeapon();
 		}
-		if( !IsLocalPlayer ) return;
 
-		if( IsClient && IsOwner )
-			ClientUpdate();
-
-		if( IsServer )
+		if( IsLocalPlayer ) {
+			CalculateMovement();
 			MovePlayer();
-		else if( IsOwner )
-			updatePlayerServerRpc( moveDirection, moveRotation );
+		}
+
+		updateOtherClient();
 	}
 
-	[ServerRpc]
-	void updatePlayerServerRpc(Vector3 pos, Quaternion rot ) {
-		moveDirection = pos;
-		moveRotation = rot;
-		MovePlayer();
+	private void updateOtherClient() {
+		if( IsOwner ) {
+			ownerPos.Value = transform.position;
+			ownerRot.Value = transform.rotation;
+		}
+		else {
+			transform.position = ownerPos.Value;
+			transform.rotation = ownerRot.Value;
+		}
+
 	}
 
 	void MovePlayer()
@@ -139,7 +153,7 @@ public class PlayerController : NetworkBehaviour
 			transform.rotation *= moveRotation;		
 	}
 
-	void ClientUpdate()
+	void CalculateMovement()
 	{
 		if( weapon != null ) {
 			if( Input.GetButtonUp("Fire1")  ) {
