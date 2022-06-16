@@ -52,6 +52,7 @@ namespace iOrchi {
 			Quaternion projectileRotation = arrow.transform.rotation;
 
 			GameLogic.spawnProjectile("arrow", projectilePosition, projectileRotation, arrowPower);
+			arrow.SetActive(false);
 
 			Invoke("recharged", rechargeTime);
 		}
