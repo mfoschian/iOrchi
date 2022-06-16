@@ -12,17 +12,18 @@ public class MagicBarrier : MonoBehaviour
     }
 
 	void disableArrows() {
-		Rigidbody[] arrows = GetComponentsInChildren<Rigidbody>();
+		Transform[] arrows = GetComponentsInChildren<Transform>();
 		for( int i=0; i<arrows.Length; i++ ) {
-			Rigidbody rb = arrows[i];
-			// rb.useGravity = true;
-			// rb.isKinematic = false;
-			GameObject arrow = rb.gameObject;
+			Transform child = arrows[i];
+			GameObject arrow = child.gameObject;
 
-			GameObject boom = Instantiate(effect, arrow.transform.position, arrow.transform.rotation);
+			if( arrow != gameObject ) {
 
-			Destroy(rb.gameObject, 1f);
-			Destroy(boom, 2f);
+				GameObject boom = Instantiate(effect, arrow.transform.position, arrow.transform.rotation);
+
+				Destroy(child.gameObject, 1f);
+				Destroy(boom, 2f);
+			}
 		}
 	}
 

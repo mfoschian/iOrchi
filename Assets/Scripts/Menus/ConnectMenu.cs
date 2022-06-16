@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class MainMenu : MonoBehaviour
+public class ConnectMenu : MonoBehaviour
 {
 	public interface Listener {
 		void onStart(string mode);

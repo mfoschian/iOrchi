@@ -16,41 +16,27 @@ public class PlayerController : NetworkBehaviour
 	public float lookXLimit = 45.0f;
 	public bool canJump = true;
 
-	CharacterController characterController;
-	Vector3 moveDirection = Vector3.zero;
-	float rotationX = 0;
-
 	[HideInInspector]
 	public bool canMove = true;
-
-
-
-
-
-
-	public GameObject arrowPrefab;
-	public Transform arrowStartPosition;
-	[Range(0,1)] public float arrowPower = 0.0f;
-	public float arrowLoadTime = 2.0f;
-	public float rechargeTime = 1.0f;
 
 	public Camera[] cameras;
 	private int m_activeCamera = 0;
 
 	public string playerName = "Player 1";
 
-	public enum ArrowStatus {
-		noArrow,
-		armed,
-		starting,
-		charging,
-		landed
-	}
 
-	iOrchi.Arrow arrow;
-	ArrowStatus arrowStatus = ArrowStatus.noArrow;
-	float bowExtension = 0.5f;
-	float timeT = 0.0f;
+	private CharacterController characterController;
+	private Vector3 moveDirection = Vector3.zero;
+	private Quaternion moveRotation = Quaternion.identity;
+	private float rotationX = 0;
+
+
+	public GameObject weaponPrefab;
+	public Transform weaponPosition;
+
+	iOrchi.Weapon weapon = null;
+	bool weaponReleased = false;
+	
 
 	public void enemyHitted(float distance, EnemyNavAgent enemy) {
 		Debug.Log( "Enemy hitted by " + playerName + " from " + distance + " meters");
@@ -103,51 +89,63 @@ public class PlayerController : NetworkBehaviour
 		m_activeCamera = ix;
 	}
 
-	void armArrow() {
-		GameObject projectile = Instantiate(arrowPrefab, arrowStartPosition.position, arrowStartPosition.rotation);
-		bool ok = projectile.TryGetComponent(out arrow);
-		if( ok ) {
-			arrowPower = 0.0f;
-			timeT = 0.0f;
-			arrowStatus = ArrowStatus.armed;
-			projectile.transform.parent = arrowStartPosition;
+	void armWeapon() {
+		if( weaponPrefab != null ) {
+			GameObject w = Instantiate(weaponPrefab, weaponPosition.position, weaponPosition.rotation);
+			//projectile.GetComponent<NetworkObject>().Spawn();
+			bool ok = w.TryGetComponent(out weapon);
+			if(ok && weapon != null) {
+				w.transform.parent = weaponPosition;
+				weapon.Arm();
+				Debug.Log("Armed weapon " + weapon.GetName() + " for " + playerName);
+			}
+		}
+		else {
+			Debug.Log("No weapon for " + playerName);
 		}
 	}
 
-	void fireArrow() {
-		arrowStatus = ArrowStatus.charging;
-		arrow.Release(arrowPower);
-		Invoke("recharged", rechargeTime);
-	}
-
-	void recharged() {
-		arrowStatus = ArrowStatus.noArrow;
-	}
-
-    void Update()
-    {
+	void Update()
+	{
+		if( weapon == null && weaponPrefab != null ) {
+			armWeapon();
+		}
 		if( !IsLocalPlayer ) return;
 
-		if( arrowStatus == ArrowStatus.noArrow ) {
-			armArrow();
-		}
+		if( IsClient && IsOwner )
+			ClientUpdate();
 
-		if( Input.GetButtonUp("Fire1") && arrowStatus == ArrowStatus.armed ) {
-			arrowStatus = ArrowStatus.starting;
-		}
+		if( IsServer )
+			ServerUpdate();
+	}
 
-		if( (Input.GetButton("Fire1") || Input.GetKeyUp(KeyCode.Space)) && arrowStatus == ArrowStatus.armed ) {
-			float dt = Time.deltaTime;
-			timeT += dt;
-			float perc = timeT / arrowLoadTime;
-			if( arrowPower < 1.0f ) {
-				arrowPower = perc;
+	[ServerRpc]
+	void updatePlayerServerRpc(Vector3 pos, Quaternion rot ) {
+		characterController.Move(moveDirection * Time.deltaTime);
+
+		if( moveRotation != null )
+			transform.rotation *= moveRotation;
+
+	}
+
+	void ServerUpdate()
+	{
+		updatePlayerServerRpc( moveDirection, moveRotation );
+	}
+
+	void ClientUpdate()
+	{
+		if( weapon != null ) {
+			if( Input.GetButtonUp("Fire1")  ) {
+				weaponReleased = true;
 			}
-			if( perc <= 1.0f ) {
-				Vector3 pos = arrow.transform.position;
-				pos -= arrow.transform.forward * (dt * bowExtension);
-				// pos.z = arrowStartPosition.position.z - (perc * bowExtension);
-				arrow.transform.position = pos;
+
+			if( Input.GetButtonUp("Fire2")  ) {
+				weapon.Info();
+			}
+
+			if( (Input.GetButton("Fire1") || Input.GetKeyUp(KeyCode.Space))  ) {
+				weapon.ChargeWeapon();
 			}
 		}
 
@@ -183,7 +181,7 @@ public class PlayerController : NetworkBehaviour
         }
 
         // Move the controller
-        characterController.Move(moveDirection * Time.deltaTime);
+        // characterController.Move(moveDirection * Time.deltaTime);
 
         // Player and Camera rotation
         if (canMove)
@@ -191,7 +189,8 @@ public class PlayerController : NetworkBehaviour
             rotationX += -Input.GetAxis("Mouse Y") * lookSpeed;
             rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
             playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
-            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
+            // transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
+            moveRotation = Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
         }
     }
 
@@ -202,10 +201,10 @@ public class PlayerController : NetworkBehaviour
 	}
 
 	void FixedUpdate() {
-		if( arrowStatus == ArrowStatus.starting ) {
-			fireArrow();
+		if( weaponReleased ) {
+			weaponReleased = false;
+			if( weapon != null )
+				weapon.Release();
 		}
-		// else if( arrowStatus == ArrowStatus.flying && arrow.isLanded() )
-		// 	arrowStatus = ArrowStatus.noArrow;
 	}
 }

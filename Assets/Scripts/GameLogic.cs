@@ -3,17 +3,17 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 
-public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.IListener, MainMenu.Listener
+public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.IListener, ConnectMenu.Listener
 {
-	public MainMenu Menu;
-	public NetworkManager Net;
-
+	public ConnectMenu Menu;
 	private HordeGenerator m_hordeGenerator;
 	private EnemyBrain m_brain;
 	private PlayerManager m_playerManager;
 	private IHUD m_hud;
 
 	public Camera lobbyCamera = null;
+
+	public bool debugStartHorde = true;
 
 	// private int status = 0;
 
@@ -24,6 +24,61 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 
 	public GameObject hud;
 	public int enemiesToLose = 7;
+
+	[System.Serializable]
+	public class Spawnable {
+		public string name = null;
+		public GameObject prefab = null;
+		public GameObject staticPrefab = null;
+	}
+	
+	public Spawnable[] spawnables;
+
+	private static GameLogic _instance = null;
+
+	[ServerRpc(RequireOwnership=false)]
+	private void spawnProjectileServerRpc(string name, Vector3 pos, Quaternion rot, float power) {
+		_spawnProjectile(name,pos,rot,power);
+	}
+
+	private void _spawnProjectile(string name, Vector3 pos, Quaternion rot, float power) {
+		if( !IsServer ) {
+			spawnProjectileServerRpc(name,pos,rot,power);
+			return;
+		}
+
+		Spawnable spw = null;
+		for( int i=0; i<spawnables.Length; i++) {
+			Spawnable s = spawnables[i];
+			if( s.name == name ) {
+				spw = s;
+				break;
+			}
+		}
+		if( spw == null ) {
+			Debug.LogError("Spawnable not found: "+ name);
+			return;
+		}
+
+		GameObject projectile = Instantiate(spw.prefab, pos, rot);
+		iOrchi.Arrow arrow = projectile.GetComponent<iOrchi.Arrow>();
+		if( arrow != null ) {
+			arrow.setPower(power);
+		}
+		NetworkObject neto = projectile.GetComponent<NetworkObject>();
+		if( neto != null ) {
+			neto.Spawn();
+		}
+
+	}
+
+	static public void spawnProjectile(string name, Vector3 pos, Quaternion rot, float power) {
+		if( _instance == null )
+			return;
+		
+		_instance._spawnProjectile(name,pos,rot,power);
+		
+	}
 
 	void startRound() {
 
@@ -44,6 +99,9 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 			if( hud != null )
 				hud.SetActive(false);
 		}
+
+		if( _instance == null )
+			_instance = this;
 	}
     void StartGame()
     {
@@ -114,7 +172,10 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 	}
 
 	public void onPlayersAvailable() {
-		startRound();
+		if( debugStartHorde )
+			startRound();
+		else
+			Debug.Log("Horde disabled");
 	}
 
 	public void onStart(string mode) {
@@ -124,20 +185,16 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 		else if( mode == "Host") {
 			StartGame();
 
-			if( Net != null ) {
-				bool ok = Net.StartHost();
-				if( ok )
-					disableLobbyCam();
-			}
+			bool ok = NetworkManager.Singleton.StartHost();
+			if( ok )
+				disableLobbyCam();
 		}
 		else if( mode == "Client") {
 			StartGame();
 
-			if( Net != null ) {
-				bool ok = Net.StartClient();
-				if( ok )
-					disableLobbyCam();
-			}
+			bool ok = NetworkManager.Singleton.StartClient();
+			if( ok )
+				disableLobbyCam();
 		}
 	}
 
