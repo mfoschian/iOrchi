@@ -36,6 +36,14 @@ namespace iOrchi {
 		public void setPower(float p) {
 			power = p;
 		}
+
+		public void setColor( Color c ) {
+			if( !trailRenderer ) return;
+			// Gradient g = trailRenderer.colorGradient;
+			// g.colorKeys[0].color = c;
+			trailRenderer.startColor = c;
+		}
+
 		void Start() {
 
 		}
