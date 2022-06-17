@@ -4,9 +4,9 @@ using UnityEngine;
 using Unity.Netcode;
 
 [RequireComponent(typeof(CharacterController))]
+[RequireComponent(typeof(NetworkObject))]
 public class PlayerController : NetworkBehaviour
 {
-
 	public float walkingSpeed = 7.5f;
 	public float runningSpeed = 11.5f;
 	public float jumpSpeed = 8.0f;
@@ -29,7 +29,7 @@ public class PlayerController : NetworkBehaviour
 	private Vector3 moveDirection = Vector3.zero;
 	private Quaternion moveRotation = Quaternion.identity;
 	private float rotationX = 0;
-
+	private Color playerColor = Color.green;
 
 	public GameObject weaponPrefab;
 	public Transform weaponPosition;
@@ -59,9 +59,26 @@ public class PlayerController : NetworkBehaviour
 		PlayerManager.addPlayer( this );
 	}
 
+	public void setColor(Color c) {
+		playerColor = c;
+		Renderer r = GetComponent<Renderer>();
+		if( !r )
+			return;
+
+		Material m = r.material;
+		if( m )
+			m.color = c;
+	}
+	public Color getColor() {
+		return playerColor;
+	}
+
 	void Start() {
 
 		characterController = GetComponent<CharacterController>();
+		Renderer r = GetComponent<Renderer>();
+		if( r != null && r.material != null )
+			playerColor = r.material.color;
 
 		if( ! IsLocalPlayer )
 			return;

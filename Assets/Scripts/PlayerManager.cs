@@ -18,6 +18,9 @@ public class PlayerManager : NetworkBehaviour
 	public int playersBeforeStart = 1;
 	public int maxPlayers = 4;
 
+	public Color[] playersColor = { Color.green, Color.blue, Color.red, Color.yellow, Color.white, Color.black };
+
+
 	public void OnEnable() {
 		if( m_instance == null )
 			m_instance = this;
@@ -50,11 +53,26 @@ public class PlayerManager : NetworkBehaviour
 		Instance._addPlayer( p );
 	}
 
+	private Color getPlayerColor( int playerPos ) {
+		Color c;
+
+		if( playerPos < playersColor.Length )
+			c = playersColor[playerPos];
+		else
+			// random color
+			c = new Color( Random.Range(0.0f,1.0f), Random.Range(0.0f,1.0f), Random.Range(0.0f,1.0f) );
+
+		return c;
+	}
+
 	private void _addPlayer( PlayerController p ) {
 		if( players.Count < maxPlayers ) {
 			Transform t = getNextPlayerSpawnPosition();
 			p.transform.position = t.position;
 			p.transform.rotation = t.rotation;
+
+			Color c = getPlayerColor( players.Count );
+			p.setColor( c );
 
 			players.Add( p );
 
@@ -64,15 +82,4 @@ public class PlayerManager : NetworkBehaviour
 		}
 	}
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }

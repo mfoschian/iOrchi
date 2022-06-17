@@ -37,15 +37,19 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 	private static GameLogic _instance = null;
 
 	[ServerRpc(RequireOwnership=false)]
-	private void spawnProjectileServerRpc(string name, Vector3 pos, Quaternion rot, float power) {
-		_spawnProjectile(name,pos,rot,power);
+	private void spawnProjectileServerRpc(string name, Vector3 pos, Quaternion rot, float power, ulong clientId ) {
+		_spawnProjectile(name,pos,rot,power,clientId);
 	}
 
-	private void _spawnProjectile(string name, Vector3 pos, Quaternion rot, float power) {
+	private void _spawnProjectile(string name, Vector3 pos, Quaternion rot, float power, ulong clientId = 0) {
 		if( !IsServer ) {
-			spawnProjectileServerRpc(name,pos,rot,power);
+			ulong cid = clientId == 0 ? NetworkManager.Singleton.LocalClientId : clientId;
+			spawnProjectileServerRpc(name,pos,rot,power,cid);
 			return;
 		}
+
+		NetworkObject po = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
+		PlayerController pc = po.gameObject.GetComponent<PlayerController>();
 
 		Spawnable spw = null;
 		for( int i=0; i<spawnables.Length; i++) {
@@ -64,6 +68,10 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 		iOrchi.Arrow arrow = projectile.GetComponent<iOrchi.Arrow>();
 		if( arrow != null ) {
 			arrow.setPower(power);
+			if( pc != null ) {
+				Color c = pc.getColor();
+				arrow.setColor(c);
+			}
 		}
 		NetworkObject neto = projectile.GetComponent<NetworkObject>();
 		if( neto != null ) {
