@@ -1,13 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
 
 namespace iOrchi {
-	public class Arrow : MonoBehaviour
+	public class Arrow : NetworkBehaviour
 	{
 	    public float speed = 1000f;
 	    public Transform tip;
 		public int damage = 10;
+		public GameObject clientArrowPrefab;
 
 		bool inAir = false;
 		bool landed = false;
@@ -29,30 +31,51 @@ namespace iOrchi {
 	    public AudioClip launchClip;
 	    public AudioClip hitClip;
 
+		private NetworkVariable<float> _power = new NetworkVariable<float>(0);
+		private NetworkVariable<Color> _color = new NetworkVariable<Color>(Color.white);
+
+		public void setPower(float p) {
+			_power.Value = p;
+		}
+
+		public void setColor(Color c) {
+			_color.Value = c;
+		}
+
 		void Start() {
-			setup();
+
 		}
 
-		public void setup()
-		{
-		    rb = GetComponent<Rigidbody>();
-			SetPhysics(false);
-			ArrowParticles(false);			
+		public override void OnNetworkSpawn() {
+			if( IsServer ) {
+				Debug.Log($"Starting arrow fly with power: {_power.Value}");
+				StartMotion(_power.Value);
+			}
+
+			if( trailRenderer )
+				trailRenderer.startColor = _color.Value;
 		}
 
-		void Update()
-		{
-		    
+		void Update() {
 		}
 
 	    private void FixedUpdate()
 	    {
-	        if (inAir)
+	        if (IsServer && inAir)
 	        {
 	            CheckCollision();
 				lastPosition = tip.position;
 	        }
 	    }
+
+		private string getObjectPathName(Transform o) {
+			string name = o.name;
+			Transform parent = o.parent;
+			if( parent != null ) {
+				name = getObjectPathName(parent) + '/' + name;
+			}
+			return name;
+		}
 
 	    private void CheckCollision()
 	    {
@@ -84,9 +107,16 @@ namespace iOrchi {
 						}
 
 						// Attach arrow to hitted body
-						transform.parent = hitted.transform;
+						string _name = getObjectPathName(hitted.transform);
+						Debug.Log("Hitted " + _name);
+						Vector3 relPos = transform.position - hitted.transform.position;
+
+						setParentClientRpc(_name, relPos);
+						
+						attachTo(hitted.transform, transform.position);
 						StopMotion();
 
+						Destroy(gameObject);
 					}
 				}
 
@@ -101,8 +131,28 @@ namespace iOrchi {
 	            // StopMotion();
 	        }
 	    }
-	    private void StopMotion()
-	    {
+
+		private void attachTo(Transform hitted, Vector3 position) {
+			if(clientArrowPrefab != null) {
+				GameObject clientArrow = Instantiate(clientArrowPrefab, position, transform.rotation);
+				clientArrow.transform.parent = hitted;
+			}
+		}
+
+		[ClientRpc]
+		public void setParentClientRpc(string objectPath, Vector3 relPos) {
+			GameObject hitted = GameObject.Find(objectPath);
+			if( hitted != null ) {
+				Vector3 pos = hitted.transform.position + relPos;
+				attachTo(hitted.transform, pos);
+				
+			}
+			else {
+				Debug.Log( "Object " + objectPath + " not found");
+			}
+		}
+
+	    private void StopMotion() {
 			inAir = false;
 			landed = true;
 			SetPhysics(false);
@@ -111,21 +161,39 @@ namespace iOrchi {
 	        //ArrowSounds(hitClip, 1.5f, 2, .8f, -2);
 	    }
 
-	    public void Release(float value, PlayerController p = null)
-	    {
-	        inAir = true;
-			transform.parent = null;
+		private void StartMotion(float value, PlayerController p = null ) {
+			inAir = true;
+			// transform.parent = null;
 			startPoint = transform.position;
 			owner = p;
 
-	        SetPhysics(true);
-	        MaskAndFire(value);
-	        StartCoroutine(RotateWithVelocity());
+			rb = GetComponent<Rigidbody>();
 
-	        lastPosition = tip.position;
+			SetPhysics(true);
+			ApplyImpulse(value);
+			StartCoroutine(RotateWithVelocity());
 
-	        ArrowParticles(true);
-	        //ArrowSounds(launchClip, 4.2f + (.6f*value), 4.4f + (.6f*value),Mathf.Max(.7f,value), -1);
+			lastPosition = tip.position;
+
+			ArrowParticles(true);
+			//ArrowSounds(launchClip, 4.2f + (.6f*value), 4.4f + (.6f*value),Mathf.Max(.7f,value), -1);
+		}
+
+	    public void Release(float value, PlayerController p = null)
+	    {
+			/*
+			if( NetworkManager.Singleton.IsServer ) {			
+				NetworkObject neto = gameObject.GetComponent<NetworkObject>();
+				if( neto != null )
+					neto.Spawn();
+
+				StartMotion(value, p);
+			}
+			else {
+				SetPhysics(false);
+				releaseArrowServerRpc(value);
+			}
+			*/
 	    }
 
 	    private void SetPhysics(bool usePhysics)
@@ -136,8 +204,7 @@ namespace iOrchi {
 			}
 	    }
 
-	    private void MaskAndFire(float power)
-	    {
+	    private void ApplyImpulse(float power) {
 	        Vector3 force = transform.forward * power * speed;
 	        if(rb != null) rb.AddForce(force, ForceMode.Impulse);
 	    }
