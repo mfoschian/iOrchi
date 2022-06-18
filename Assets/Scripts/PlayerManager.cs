@@ -10,7 +10,6 @@ public class PlayerManager : NetworkBehaviour
 	}
 
 	public IListener listener = null;
-	private static PlayerManager m_instance = null;
 
 	private List<PlayerController> players = new List<PlayerController>();
 	public Transform[] spawnPositions;
@@ -20,17 +19,7 @@ public class PlayerManager : NetworkBehaviour
 
 	public Color[] playersColor = { Color.green, Color.blue, Color.red, Color.yellow, Color.white, Color.black };
 
-
-	public void OnEnable() {
-		if( m_instance == null )
-			m_instance = this;
-	}
-	private static PlayerManager Instance {
-		get {
-			return m_instance;
-		}
-	}
-
+	
 	public Transform getNextPlayerSpawnPosition() {
 		Transform res = spawnPositions[m_nextSpawnIndex++];
 
@@ -46,13 +35,6 @@ public class PlayerManager : NetworkBehaviour
     //     Position.Value = GetRandomPositionOnPlane();
     // }
 
-	public static void addPlayer( PlayerController p ) {
-		if( !NetworkManager.Singleton.IsServer )
-			return;
-
-		Instance._addPlayer( p );
-	}
-
 	private Color getPlayerColor( int playerPos ) {
 		Color c;
 
@@ -65,17 +47,27 @@ public class PlayerManager : NetworkBehaviour
 		return c;
 	}
 
-	private void _addPlayer( PlayerController p ) {
+	public void addPlayer( PlayerController p ) {
 		if( players.Count < maxPlayers ) {
 			Transform t = getNextPlayerSpawnPosition();
-			p.transform.position = t.position;
-			p.transform.rotation = t.rotation;
-
 			Color c = getPlayerColor( players.Count );
+
+			// Server authoritative changes
 			p.setColor( c );
+
+			// Client authoritative changes
+			NetworkObject nob = p.gameObject.GetComponent<NetworkObject>();
+			if( nob ) {
+				Debug.Log($"Server send start position to {nob.OwnerClientId}");
+				ClientRpcParams sendOnlyToOwner = new ClientRpcParams() {
+					Send = new ClientRpcSendParams() { TargetClientIds = new []{nob.OwnerClientId} }
+				};
+				p.setStartPositionClientRpc(t.position, t.rotation, sendOnlyToOwner );
+			}
 
 			players.Add( p );
 
+			Debug.Log($"Players {players.Count} / {playersBeforeStart}");
 			if( players.Count == playersBeforeStart && listener != null )
 				listener.onPlayersAvailable();
 

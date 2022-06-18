@@ -2,11 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using Unity.Netcode;
 
-public class EnemyNavAgent : MonoBehaviour
+[RequireComponent(typeof(NetworkObject))]
+public class EnemyNavAgent : NetworkBehaviour
 {
 	public int vitalPoints = 10;
 	public float targetTolerance = 7;
+
 
 	public interface IEnemyObserver	{
 		void enemyKilled(EnemyNavAgent enemy);
@@ -20,11 +23,17 @@ public class EnemyNavAgent : MonoBehaviour
 	private bool startWalking = false;
 
     void Start() {
+    }
+
+	public override void OnNetworkSpawn() {
+		Debug.Log( "Enemy spawned");
+
 		animController = GetComponent<Animator>();
 		rb = GetComponent<Rigidbody>();
 		if( animController ) animController.SetInteger( "vitalPoints", vitalPoints );
 		agent = GetComponent<NavMeshAgent>();
-    }
+		
+	}
 
 	public void setObserver(IEnemyObserver obs) {
 		observer = obs;
@@ -77,6 +86,8 @@ public class EnemyNavAgent : MonoBehaviour
 	}
 
 	private void FixedUpdate() {
+		if( !IsServer ) return;
+
 		if( animController ) animController.SetInteger("vitalPoints", vitalPoints);
 		if( agent ) {
 			if( agent.hasPath ) {

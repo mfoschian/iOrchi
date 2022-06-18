@@ -1,8 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
 
-public class HordeGenerator : MonoBehaviour
+[RequireComponent(typeof(NetworkObject))]
+public class HordeGenerator : NetworkBehaviour
 {
 	public List<GameObject> enemiesPrefabs;
 	public int hordeCount = 10;
@@ -31,6 +33,13 @@ public class HordeGenerator : MonoBehaviour
 		for( int i=0; i<num; i++ ) {
 			GameObject enemy = generateEnemy();
 			result.Add( enemy );
+
+			if( IsServer ) {
+				NetworkObject no = enemy.GetComponent<NetworkObject>();
+				if( no != null ) {
+					no.Spawn();
+				}
+			}
 		}
 		return result;
 	}

@@ -1196,13 +1196,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 601260028}
-  m_LocalRotation: {x: 0.26140416, y: -0, z: -0, w: 0.9652295}
+  m_LocalRotation: {x: 0.3007651, y: -0, z: -0, w: 0.9536983}
   m_LocalPosition: {x: -19.16, y: 31.5, z: 47.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 2
-  m_LocalEulerAnglesHint: {x: 30.307, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 35.007, y: 0, z: 0}
 --- !u!1001 &623563885
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2240,6 +2240,16 @@ MonoBehaviour:
       OverridingTargetPrefab: {fileID: 0}
     - Override: 0
       Prefab: {fileID: 3803118704064343263, guid: 70af8bfdf803f984899f5c4c5784289d, type: 3}
+      SourcePrefabToOverride: {fileID: 0}
+      SourceHashToOverride: 0
+      OverridingTargetPrefab: {fileID: 0}
+    - Override: 0
+      Prefab: {fileID: 6619289152451762941, guid: 5c2c00b1633c963428a03d9f973f39ef, type: 3}
+      SourcePrefabToOverride: {fileID: 0}
+      SourceHashToOverride: 0
+      OverridingTargetPrefab: {fileID: 0}
+    - Override: 0
+      Prefab: {fileID: 8958783754078365942, guid: 46fb937b8f52aae438837e2b30dfd6af, type: 3}
       SourcePrefabToOverride: {fileID: 0}
       SourceHashToOverride: 0
       OverridingTargetPrefab: {fileID: 0}
@@ -3298,7 +3308,7 @@ MonoBehaviour:
   enemiesPrefabs:
   - {fileID: 6619289152451762941, guid: 5c2c00b1633c963428a03d9f973f39ef, type: 3}
   - {fileID: 8958783754078365942, guid: 46fb937b8f52aae438837e2b30dfd6af, type: 3}
-  hordeCount: 10
+  hordeCount: 1
   positionSpread: 15
   startPoint: {fileID: 1989784674}
 --- !u!4 &1942277989
@@ -3346,7 +3356,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Menu: {fileID: 997318845}
   lobbyCamera: {fileID: 601260030}
-  debugStartHorde: 0
+  debugStartHorde: 1
   hud: {fileID: 701537285}
   enemiesToLose: 7
   spawnables:
@@ -3368,8 +3378,15 @@ MonoBehaviour:
   spawnPositions:
   - {fileID: 1600206443}
   - {fileID: 1396568478}
-  playersBeforeStart: 1
+  playersBeforeStart: 2
   maxPlayers: 4
+  playersColor:
+  - {r: 0, g: 1, b: 0, a: 1}
+  - {r: 0.7066753, g: 0.122774996, b: 0.8396226, a: 1}
+  - {r: 1, g: 0, b: 0, a: 1}
+  - {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
+  - {r: 1, g: 1, b: 1, a: 1}
+  - {r: 0, g: 0, b: 0, a: 1}
 --- !u!114 &1942277993
 MonoBehaviour:
   m_ObjectHideFlags: 0

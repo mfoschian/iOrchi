@@ -29,7 +29,7 @@ public class PlayerController : NetworkBehaviour
 	private Vector3 moveDirection = Vector3.zero;
 	private Quaternion moveRotation = Quaternion.identity;
 	private float rotationX = 0;
-	private Color playerColor = Color.green;
+	private Color? playerColor = null;
 
 	public GameObject weaponPrefab;
 	public Transform weaponPosition;
@@ -47,6 +47,7 @@ public class PlayerController : NetworkBehaviour
 		NetworkVariableBase.DefaultReadPerm, // Everyone
 		NetworkVariableWritePermission.Owner
 	);
+	private NetworkVariable<Color> netPlayerColor = new NetworkVariable<Color>();
 
 
 
@@ -54,13 +55,25 @@ public class PlayerController : NetworkBehaviour
 		Debug.Log( "Enemy hitted by " + playerName + " from " + distance + " meters");
 	}
 
-	public override void OnNetworkSpawn() {
-		Debug.Log( "Player spawned");
-		PlayerManager.addPlayer( this );
+	/*public override void OnNetworkSpawn() {
+		if( NetworkManager.Singleton.IsServer )
+			Debug.Log($"PlayerController Spawned on server ownerid: {OwnerClientId}");
+		else
+			Debug.Log($"PlayerController Spawned on client ownerid: {OwnerClientId}");
+
+		netPlayerColor.OnValueChanged += OnColorChanged;
 	}
 
+	public override void OnNetworkDespawn() {
+		netPlayerColor.OnValueChanged -= OnColorChanged;
+	}
+
+	private void OnColorChanged(Color prev, Color curr ) {
+		Debug.Log("Player color changed");
+		setColor( curr );
+	}*/
+
 	public void setColor(Color c) {
-		playerColor = c;
 		Renderer r = GetComponent<Renderer>();
 		if( !r )
 			return;
@@ -68,17 +81,28 @@ public class PlayerController : NetworkBehaviour
 		Material m = r.material;
 		if( m )
 			m.color = c;
+
+		playerColor = c;
+
+		if( IsServer )
+			netPlayerColor.Value = c;
 	}
+
 	public Color getColor() {
-		return playerColor;
+		if( playerColor == null ) {
+			Renderer r = GetComponent<Renderer>();
+			if( r != null && r.material != null )
+				playerColor = r.material.color;
+		}
+		return playerColor.Value;
 	}
 
 	void Start() {
 
 		characterController = GetComponent<CharacterController>();
-		Renderer r = GetComponent<Renderer>();
-		if( r != null && r.material != null )
-			playerColor = r.material.color;
+		// Renderer r = GetComponent<Renderer>();
+		// if( r != null && r.material != null )
+		// 	playerColor = r.material.color;
 
 		if( ! IsLocalPlayer )
 			return;
@@ -139,14 +163,27 @@ public class PlayerController : NetworkBehaviour
 			armWeapon();
 		}
 
+		if( playerColor == null || playerColor.Value != netPlayerColor.Value ) {
+			setColor(netPlayerColor.Value);
+		}
+
 		if( IsLocalPlayer ) {
 			CalculateMovement();
 			MovePlayer();
+			// Align other network instances
+			ownerPos.Value = transform.position;
+			ownerRot.Value = transform.rotation;
+		}
+		else {
+			// Align from owner movements
+			transform.position = ownerPos.Value;
+			transform.rotation = ownerRot.Value;
 		}
 
-		updateOtherClient();
+		// updateOtherClient();
 	}
 
+	/*
 	private void updateOtherClient() {
 		if( IsOwner ) {
 			ownerPos.Value = transform.position;
@@ -158,6 +195,7 @@ public class PlayerController : NetworkBehaviour
 		}
 
 	}
+	*/
 
 	void MovePlayer()
 	{
@@ -244,4 +282,15 @@ public class PlayerController : NetworkBehaviour
 				weapon.Release();
 		}
 	}
+
+	[ClientRpc]
+	public void setStartPositionClientRpc(Vector3 pos, Quaternion rot, ClientRpcParams clientRpcParams = default) {
+		transform.position = pos;
+		transform.rotation = rot;
+		if( IsOwner ) {
+			ownerPos.Value = pos;
+			ownerRot.Value = rot;
+		}
+	}
+
 }

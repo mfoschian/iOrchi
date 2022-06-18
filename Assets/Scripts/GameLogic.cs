@@ -41,15 +41,21 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 		_spawnProjectile(name,pos,rot,power,clientId);
 	}
 
+	private PlayerController getPlayerFromClientId( ulong clientId ) {
+		NetworkObject po = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
+		if( !po )
+			return null;
+
+		PlayerController pc = po.gameObject.GetComponent<PlayerController>();
+		return pc;
+	}
+
 	private void _spawnProjectile(string name, Vector3 pos, Quaternion rot, float power, ulong clientId = 0) {
 		if( !IsServer ) {
 			ulong cid = clientId == 0 ? NetworkManager.Singleton.LocalClientId : clientId;
 			spawnProjectileServerRpc(name,pos,rot,power,cid);
 			return;
 		}
-
-		NetworkObject po = NetworkManager.Singleton.ConnectedClients[clientId].PlayerObject;
-		PlayerController pc = po.gameObject.GetComponent<PlayerController>();
 
 		Spawnable spw = null;
 		for( int i=0; i<spawnables.Length; i++) {
@@ -60,7 +66,7 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 			}
 		}
 		if( spw == null ) {
-			Debug.LogError("Spawnable not found: "+ name);
+			Debug.Assert(spw != null, "Spawnable not found: "+ name);
 			return;
 		}
 
@@ -68,6 +74,7 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 		iOrchi.Arrow arrow = projectile.GetComponent<iOrchi.Arrow>();
 		if( arrow != null ) {
 			arrow.setPower(power);
+			PlayerController pc = getPlayerFromClientId(clientId);
 			if( pc != null ) {
 				Color c = pc.getColor();
 				arrow.setColor(c);
@@ -110,7 +117,31 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 
 		if( _instance == null )
 			_instance = this;
+
+		NetworkManager.Singleton.OnClientConnectedCallback += (id) => {
+			OnClientConnection(id);
+		};
+		NetworkManager.Singleton.OnClientDisconnectCallback += (id) => {
+			OnClientDisconnection(id);
+		};
 	}
+
+	private void OnClientConnection( ulong clientId ) {
+		if(!NetworkManager.Singleton.IsServer) return;
+		Debug.Log( $"Player connected: {clientId}");
+		PlayerController p = getPlayerFromClientId(clientId);
+		m_playerManager.addPlayer(p);
+	}
+	
+	private void OnClientDisconnection( ulong clientId ) {
+		if(!NetworkManager.Singleton.IsServer) return;
+		Debug.Log( "Player DISconnected");
+		// PlayerController p = getPlayerFromClientId(clientId);
+		// m_playerManager.addPlayer(p);
+	}
+
+
+
     void StartGame()
     {
 		Debug.Log("Starting Game");

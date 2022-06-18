@@ -31,17 +31,15 @@ namespace iOrchi {
 	    public AudioClip launchClip;
 	    public AudioClip hitClip;
 
-		private float power = 0;
+		private NetworkVariable<float> _power = new NetworkVariable<float>(0);
+		private NetworkVariable<Color> _color = new NetworkVariable<Color>(Color.white);
 
 		public void setPower(float p) {
-			power = p;
+			_power.Value = p;
 		}
 
-		public void setColor( Color c ) {
-			if( !trailRenderer ) return;
-			// Gradient g = trailRenderer.colorGradient;
-			// g.colorKeys[0].color = c;
-			trailRenderer.startColor = c;
+		public void setColor(Color c) {
+			_color.Value = c;
 		}
 
 		void Start() {
@@ -50,13 +48,15 @@ namespace iOrchi {
 
 		public override void OnNetworkSpawn() {
 			if( IsServer ) {
-				Debug.Log($"Starting arrow fly with power: {power}");
-				StartMotion(power);
+				Debug.Log($"Starting arrow fly with power: {_power.Value}");
+				StartMotion(_power.Value);
 			}
+
+			if( trailRenderer )
+				trailRenderer.startColor = _color.Value;
 		}
 
 		void Update() {
-		    
 		}
 
 	    private void FixedUpdate()
