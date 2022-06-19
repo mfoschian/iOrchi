@@ -3,21 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 
+
 public class PlayerManager : NetworkBehaviour
 {
-	public interface IListener {
-		void onPlayersAvailable();
-	}
-
-	public IListener listener = null;
-
 	private List<PlayerController> players = new List<PlayerController>();
 	public Transform[] spawnPositions;
 	private int m_nextSpawnIndex = 0;
 	public int playersBeforeStart = 1;
 	public int maxPlayers = 4;
 
-	public Color[] playersColor = { Color.green, Color.blue, Color.red, Color.yellow, Color.white, Color.black };
+	public delegate void OnNeededPlayersReachedDelegate();
+	static private void _OnNeededPlayersReached() {
+		Debug.Log("Needed players reached: ");
+	}
+	public OnNeededPlayersReachedDelegate OnNeededPlayersReached = new OnNeededPlayersReachedDelegate(_OnNeededPlayersReached);
+
+	public Color[] playersColor = { Color.green, Color.red, Color.blue, Color.yellow, Color.white, Color.black };
 
 	
 	public Transform getNextPlayerSpawnPosition() {
@@ -68,9 +69,8 @@ public class PlayerManager : NetworkBehaviour
 			players.Add( p );
 
 			Debug.Log($"Players {players.Count} / {playersBeforeStart}");
-			if( players.Count == playersBeforeStart && listener != null )
-				listener.onPlayersAvailable();
-
+			if( players.Count >= playersBeforeStart )
+				OnNeededPlayersReached();
 		}
 	}
 

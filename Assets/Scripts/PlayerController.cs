@@ -61,23 +61,6 @@ public class PlayerController : NetworkBehaviour
 		Debug.Log( "Enemy hitted by " + playerName + " from " + distance + " meters");
 	}
 
-	/*public override void OnNetworkSpawn() {
-		if( NetworkManager.Singleton.IsServer )
-			Debug.Log($"PlayerController Spawned on server ownerid: {OwnerClientId}");
-		else
-			Debug.Log($"PlayerController Spawned on client ownerid: {OwnerClientId}");
-
-		netPlayerColor.OnValueChanged += OnColorChanged;
-	}
-
-	public override void OnNetworkDespawn() {
-		netPlayerColor.OnValueChanged -= OnColorChanged;
-	}
-
-	private void OnColorChanged(Color prev, Color curr ) {
-		Debug.Log("Player color changed");
-		setColor( curr );
-	}*/
 
 	public void setColor(Color c) {
 		Renderer r = GetComponent<Renderer>();
@@ -126,9 +109,9 @@ public class PlayerController : NetworkBehaviour
 			}
 		}
 
-		// Lock cursor
-		Cursor.lockState = CursorLockMode.Locked;
-		Cursor.visible = false;
+		// // Lock cursor
+		// Cursor.lockState = CursorLockMode.Locked;
+		// Cursor.visible = false;
 
 	}
 
@@ -180,7 +163,7 @@ public class PlayerController : NetworkBehaviour
 			ownerPos.Value = transform.position;
 			ownerRot.Value = transform.rotation;
 			if( playerCamera )
-			ownerCamRot.Value = playerCamera.transform.localRotation;
+				ownerCamRot.Value = playerCamera.transform.localRotation;
 		}
 		else {
 			// Align from owner movements
@@ -287,6 +270,9 @@ public class PlayerController : NetworkBehaviour
 		if( IsOwner ) {
 			ownerPos.Value = pos;
 			ownerRot.Value = rot;
+			if(playerCamera) {
+				GameLogic.turnOnCamera(playerCamera);
+			}
 		}
 	}
 

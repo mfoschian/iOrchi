@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 
-public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.IListener, ConnectMenu.Listener
+public class GameLogic : NetworkBehaviour, 
+			EnemyBrain.IListener,
+			ConnectMenu.Listener, StartMenu.Listener
 {
-	public ConnectMenu Menu;
+	public ConnectMenu ConnectMenu;
+	public StartMenu StartMenu;
 	private HordeGenerator m_hordeGenerator;
 	private EnemyBrain m_brain;
 	private PlayerManager m_playerManager;
@@ -35,6 +38,8 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 	public Spawnable[] spawnables;
 
 	private static GameLogic _instance = null;
+
+	private bool isHosted = false;
 
 	[ServerRpc(RequireOwnership=false)]
 	private void spawnProjectileServerRpc(string name, Vector3 pos, Quaternion rot, float power, ulong clientId ) {
@@ -95,6 +100,23 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 		
 	}
 
+	static public void turnOnCamera(Camera cam) {
+		if( _instance == null ) return;
+		if( cam == null ) return;
+
+		cam.gameObject.SetActive(true);
+
+		_instance.disableLobbyCam();
+	}
+
+	static public void turnOffCamera(Camera cam) {
+		if( _instance == null ) return;
+		_instance.enableLobbyCam();
+
+		if( cam == null ) return;
+		cam.gameObject.SetActive(false);
+	}
+
 	void startRound() {
 
 		if( !NetworkManager.Singleton.IsServer ) 
@@ -108,11 +130,13 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 
     // Start is called before the first frame update
     void Start() {
-		if( Menu != null ) {
-			// Menu.SetActive(true);
-			Menu.setListener(this);
+		if( ConnectMenu != null ) {
+			ConnectMenu.setListener(this);
 			if( hud != null )
 				hud.SetActive(false);
+		}
+		if( StartMenu != null ) {
+			StartMenu.setListener(this);
 		}
 
 		if( _instance == null )
@@ -140,22 +164,37 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 		// m_playerManager.addPlayer(p);
 	}
 
+	private void activateHUD() {
+		if( hud != null ) {
+			m_hud = hud.GetComponent<IHUD>();
+			hud.SetActive(true);
+		}
+		// Lock cursor
+		Cursor.lockState = CursorLockMode.Locked;
+		Cursor.visible = false;
+	}
 
+	private void activateRoundMenu() {
+		if( StartMenu != null ) {
+			StartMenu.gameObject.SetActive(true);
+		}
+	}
+
+	private void deactivateRoundMenu() {
+		if( StartMenu != null ) {
+			StartMenu.gameObject.SetActive(false);
+		}
+	}
 
     void StartGame()
     {
 		Debug.Log("Starting Game");
 
-		if( Menu != null ) {
-			Menu.gameObject.SetActive(false);
-		}
-		if( hud != null ) {
-			m_hud = hud.GetComponent<IHUD>();
-			hud.SetActive(true);
+		if( ConnectMenu != null ) {
+			ConnectMenu.gameObject.SetActive(false);
 		}
 		m_playerManager = GetComponent<PlayerManager>();
-		if( m_playerManager != null )
-			m_playerManager.listener = this;
+		m_playerManager.OnNeededPlayersReached += OnNeededPlayersReached;
 
 		m_hordeGenerator = GetComponent<HordeGenerator>();
 		m_brain = GetComponent<EnemyBrain>();
@@ -166,11 +205,23 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
     }
 
 	private void updateHUD() {
+		_updateHUD(m_brain.enemiesCount, m_brain.enemiesOnTarget);
+
+		if( NetworkManager.Singleton.IsServer )
+			updateClientHUDsClientRpc(m_brain.enemiesCount, m_brain.enemiesOnTarget);
+	}
+
+	private void _updateHUD(int enemies, int enOnTarget) {
 		if( m_hud == null )
 			return;
 
-		m_hud.setEnemiesLeft( m_brain.enemiesCount );
-		m_hud.setEnemiesInCastle( m_brain.enemiesOnTarget );
+		m_hud.setEnemiesLeft( enemies );
+		m_hud.setEnemiesInCastle( enOnTarget );
+	}
+
+	[ClientRpc]
+	void updateClientHUDsClientRpc(int enemies, int enOnTarget) {
+		_updateHUD(enemies, enOnTarget);
 	}
 
 	public void createHorde() {
@@ -210,7 +261,15 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 		}
 	}
 
-	public void onPlayersAvailable() {
+	private void enableLobbyCam() {
+		if( lobbyCamera != null ) {
+			lobbyCamera.gameObject.SetActive(true);
+		}
+	}
+
+	public void OnNeededPlayersReached() {
+		if( isHosted ) return;
+
 		if( debugStartHorde )
 			startRound();
 		else
@@ -219,35 +278,29 @@ public class GameLogic : NetworkBehaviour, EnemyBrain.IListener, PlayerManager.I
 
 	public void onStart(string mode) {
 		if( mode == "Server") {
-			// TODO: start network server
-		}
-		else if( mode == "Host") {
 			StartGame();
 
+			bool ok = NetworkManager.Singleton.StartServer();
+		}
+		else if( mode == "Host") {
+			isHosted = true;
+			StartGame();
+			activateRoundMenu();
+
 			bool ok = NetworkManager.Singleton.StartHost();
-			if( ok )
-				disableLobbyCam();
 		}
 		else if( mode == "Client") {
 			StartGame();
+			activateHUD();
 
 			bool ok = NetworkManager.Singleton.StartClient();
-			if( ok )
-				disableLobbyCam();
 		}
 	}
 
-	public void Update() {
-
-		// if( Input.GetKeyDown(KeyCode.Backspace) ) {
-		// 	if( status == 0 ) {
-		// 		status++;
-		// 		createHorde();
-		// 	}
-		// 	else if( status == 1 ) {
-		// 		status++;
-		// 		startHorde();
-		// 	}
-		// }
+	public void onStartGame() {
+		deactivateRoundMenu();
+		activateHUD();
+		startRound();
 	}
+
 }
