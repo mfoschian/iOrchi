@@ -1,11 +1,16 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ConnectMenu : MonoBehaviour
 {
+	public InputField joinCodeBox;
+	public Button connectButton;
+	public ErrorBox errorMessageBox;
+
 	public interface Listener {
-		void onStart(string mode);
+		void onStart(string mode, string joinCode);
 	}
 
 	private Listener m_listener = null;
@@ -14,23 +19,32 @@ public class ConnectMenu : MonoBehaviour
 		m_listener = l;
 	}
 
+	public void showErrorMessage( string msg ) {
+		if( errorMessageBox != null ) {
+			errorMessageBox.setMessage( msg );
+			errorMessageBox.gameObject.SetActive(true);
+		}
+	}
+
 	public void StartServer() {
 		Debug.Log( "Starting Server" );
 		if(m_listener != null)
-			m_listener.onStart("Server");
+			m_listener.onStart("Server", null);
 
 	}
 
 	public void StartHost() {
 		Debug.Log( "Starting Host" );
 		if(m_listener != null)
-			m_listener.onStart("Host");
+			m_listener.onStart("Host", null);
 	}
 
 	public void StartClient() {
 		Debug.Log( "Starting Client" );		
-		if(m_listener != null)
-			m_listener.onStart("Client");
+		if(m_listener != null && joinCodeBox != null && isValidCode(joinCodeBox.text)) {
+			string joinCode = joinCodeBox.text;
+			m_listener.onStart("Client", joinCode );
+		}
 	}
 
 	public void ExitGame() {
@@ -44,9 +58,15 @@ public class ConnectMenu : MonoBehaviour
         
     }
 
+	private bool isValidCode(string s) {
+		return !string.IsNullOrEmpty(joinCodeBox.text);
+	}
+
     // Update is called once per frame
     void Update()
     {
-        
+        if( joinCodeBox != null && connectButton != null ) {
+			connectButton.enabled = isValidCode(joinCodeBox.text);
+		}
     }
 }

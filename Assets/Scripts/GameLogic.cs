@@ -174,8 +174,9 @@ public class GameLogic : NetworkBehaviour,
 		Cursor.visible = false;
 	}
 
-	private void activateRoundMenu() {
+	private void activateRoundMenu( string joinCode ) {
 		if( StartMenu != null ) {
+			StartMenu.setJoinCode( joinCode );
 			StartMenu.gameObject.SetActive(true);
 		}
 	}
@@ -276,24 +277,46 @@ public class GameLogic : NetworkBehaviour,
 			Debug.Log("Horde disabled");
 	}
 
-	public void onStart(string mode) {
+	public async void onStart(string mode, string joinCode ) {
 		if( mode == "Server") {
 			StartGame();
 
 			bool ok = NetworkManager.Singleton.StartServer();
 		}
 		else if( mode == "Host") {
+			string _joinCode = null;
+			if( RelayManager.Singleton.IsRelayEnabled ) {
+				_joinCode = await RelayManager.Singleton.SetupRelay();
+				Debug.Log($"Join code is {_joinCode}");
+				ConnectMenu.showErrorMessage( RelayManager.Singleton.Error );
+			}
+
 			isHosted = true;
 			StartGame();
-			activateRoundMenu();
+			activateRoundMenu(_joinCode);
 
 			bool ok = NetworkManager.Singleton.StartHost();
 		}
 		else if( mode == "Client") {
+			if( RelayManager.Singleton.IsRelayEnabled ) {
+				if( joinCode == null ) {
+					Debug.Log("No join code");
+					return;
+				}
+				bool ok = await RelayManager.Singleton.JoinRelay(joinCode);
+				if( !ok ) {
+					Debug.Log("Join Failed");
+					ConnectMenu.showErrorMessage( RelayManager.Singleton.Error );
+					return;
+				}
+
+				Debug.Log( "Joined" );
+			}
+
 			StartGame();
 			activateHUD();
 
-			bool ok = NetworkManager.Singleton.StartClient();
+			NetworkManager.Singleton.StartClient();
 		}
 	}
 
