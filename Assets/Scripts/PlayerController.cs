@@ -28,6 +28,7 @@ public class PlayerController : NetworkBehaviour
 	private CharacterController characterController;
 	private Vector3 moveDirection = Vector3.zero;
 	private Quaternion moveRotation = Quaternion.identity;
+	private Quaternion camRotation = Quaternion.identity;
 	private float rotationX = 0;
 	private Color? playerColor = null;
 
@@ -38,6 +39,11 @@ public class PlayerController : NetworkBehaviour
 	bool weaponReleased = false;
 
 	private NetworkVariable<Vector3> ownerPos = new NetworkVariable<Vector3>(
+		default,
+		NetworkVariableBase.DefaultReadPerm, // Everyone
+		NetworkVariableWritePermission.Owner
+	);
+	private NetworkVariable<Quaternion> ownerCamRot = new NetworkVariable<Quaternion>(
 		default,
 		NetworkVariableBase.DefaultReadPerm, // Everyone
 		NetworkVariableWritePermission.Owner
@@ -173,29 +179,18 @@ public class PlayerController : NetworkBehaviour
 			// Align other network instances
 			ownerPos.Value = transform.position;
 			ownerRot.Value = transform.rotation;
+			if( playerCamera )
+			ownerCamRot.Value = playerCamera.transform.localRotation;
 		}
 		else {
 			// Align from owner movements
 			transform.position = ownerPos.Value;
 			transform.rotation = ownerRot.Value;
-		}
-
-		// updateOtherClient();
-	}
-
-	/*
-	private void updateOtherClient() {
-		if( IsOwner ) {
-			ownerPos.Value = transform.position;
-			ownerRot.Value = transform.rotation;
-		}
-		else {
-			transform.position = ownerPos.Value;
-			transform.rotation = ownerRot.Value;
+			if(playerCamera)
+				playerCamera.transform.localRotation = ownerCamRot.Value;
 		}
 
 	}
-	*/
 
 	void MovePlayer()
 	{
@@ -204,8 +199,9 @@ public class PlayerController : NetworkBehaviour
 
 		characterController.Move(moveDirection * Time.deltaTime);
 
-		if( moveRotation != null )
-			transform.rotation *= moveRotation;		
+		transform.rotation *= moveRotation;
+		if(playerCamera)
+			playerCamera.transform.localRotation = camRotation;
 	}
 
 	void CalculateMovement()
@@ -263,7 +259,8 @@ public class PlayerController : NetworkBehaviour
         {
             rotationX += -Input.GetAxis("Mouse Y") * lookSpeed;
             rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
-            playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
+			camRotation = Quaternion.Euler(rotationX, 0, 0);
+
             // transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
             moveRotation = Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
         }
