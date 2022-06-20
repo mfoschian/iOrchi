@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace iOrchi {
 
+	[RequireComponent(typeof(AudioSource))]
 	public class Bow : MonoBehaviour, Weapon
 	{
 		public GameObject ArrowPrefab;
@@ -21,8 +22,9 @@ namespace iOrchi {
 		public float arrowLoadTime = 2.0f;
 		public float rechargeTime = 1.0f;
 
+		public AudioClip arrowReleaseClip;
 
-
+		private AudioSource audioSource;
 
 
 		void Start() {
@@ -30,6 +32,7 @@ namespace iOrchi {
 				handleRelPos = transform.position - arrow.transform.position;
 				// arrowStartPosition = arrow.transform.TransformPoint(arrow.transform.position);
 				// Debug.Log($"Bow arrow pos: {handleRelPos.x}, {handleRelPos.y}, {handleRelPos.z} ");
+			audioSource = gameObject.GetComponent<AudioSource>();
 		}
 
 		public void Arm() {
@@ -54,6 +57,11 @@ namespace iOrchi {
 			GameLogic.spawnProjectile("arrow", projectilePosition, projectileRotation, arrowPower);
 			arrow.SetActive(false);
 
+			if( audioSource && arrowReleaseClip ) {
+				audioSource.Stop();
+				audioSource.PlayOneShot(arrowReleaseClip);
+			}
+
 			Invoke("recharged", rechargeTime);
 		}
 
@@ -68,18 +76,25 @@ namespace iOrchi {
 			if( arrow == null )
 				return;
 
+
 			float dt = Time.deltaTime;
 			timeT += dt;
 			float perc = timeT / arrowLoadTime;
+			if( perc >= 1.0f && audioSource && audioSource.isPlaying )  {
+				audioSource.Stop();
+			}
 			if( arrowPower < 1.0f ) {
 				arrowPower = perc;
 			}
-			if( perc <= 1.0f  && arrow != null ) {
+			if( perc <= 1.0f && arrow != null ) {
 				Vector3 pos = arrow.transform.position;
 				pos -= arrow.transform.forward * (dt * bowExtension);
 				// pos.z = arrowStartPosition.position.z - (perc * bowExtension);
 				arrow.transform.position = pos;
-			}			
+				if( audioSource && !audioSource.isPlaying ) {
+					audioSource.Play();
+				}
+			}
 		}
 
 		public string GetName() {

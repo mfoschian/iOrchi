@@ -10,6 +10,7 @@ public class EnemyNavAgent : NetworkBehaviour
 	public int vitalPoints = 10;
 	public float targetTolerance = 7;
 
+	public bool isOnTarget = false;
 
 	public interface IEnemyObserver	{
 		void enemyKilled(EnemyNavAgent enemy);
@@ -73,6 +74,7 @@ public class EnemyNavAgent : NetworkBehaviour
 	}
 
 	virtual public void targetReached() {
+		isOnTarget = true;
 		if( observer != null && agent != null ) {
 			observer.targetReached( agent.destination, this );
 		}

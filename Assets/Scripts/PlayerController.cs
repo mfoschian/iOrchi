@@ -5,6 +5,7 @@ using Unity.Netcode;
 
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(NetworkObject))]
+[RequireComponent(typeof(AudioSource))]
 public class PlayerController : NetworkBehaviour
 {
 	public float walkingSpeed = 7.5f;
@@ -35,6 +36,8 @@ public class PlayerController : NetworkBehaviour
 	public GameObject weaponPrefab;
 	public Transform weaponPosition;
 
+	private AudioListener audioListener;
+	private AudioSource soundSource;
 	iOrchi.Weapon weapon = null;
 	bool weaponReleased = false;
 
@@ -55,12 +58,31 @@ public class PlayerController : NetworkBehaviour
 	);
 	private NetworkVariable<Color> netPlayerColor = new NetworkVariable<Color>();
 
+	private enum Status {
+		idle,
+		walking,
+		running,
+		jumping
+	}
 
+	private Status myStatus = Status.idle;
+	private bool statusChanged = false;
+	private NetworkVariable<Status> netStatus = new NetworkVariable<Status>(Status.idle,
+		NetworkVariableBase.DefaultReadPerm, // Everyone
+		NetworkVariableWritePermission.Owner
+	);
 
 	public void enemyHitted(float distance, EnemyNavAgent enemy) {
 		Debug.Log( "Enemy hitted by " + playerName + " from " + distance + " meters");
 	}
 
+	public override void OnNetworkSpawn() {
+		base.OnNetworkSpawn();
+
+		characterController = GetComponent<CharacterController>();
+		audioListener = gameObject.GetComponent<AudioListener>();
+		soundSource = gameObject.GetComponent<AudioSource>();
+	}
 
 	public void setColor(Color c) {
 		Renderer r = GetComponent<Renderer>();
@@ -88,7 +110,9 @@ public class PlayerController : NetworkBehaviour
 
 	void Start() {
 
-		characterController = GetComponent<CharacterController>();
+		// characterController = GetComponent<CharacterController>();
+		// audioListener = gameObject.GetComponent<AudioListener>();
+
 		// Renderer r = GetComponent<Renderer>();
 		// if( r != null && r.material != null )
 		// 	playerColor = r.material.color;
@@ -101,8 +125,8 @@ public class PlayerController : NetworkBehaviour
 			cameras = GetComponentsInChildren<Camera>(true);
 			if( cameras.Length > 0 ) {
 				Camera cam = cameras[0];
-				cam.enabled = true;
-				cam.gameObject.SetActive(true);
+				// cam.enabled = true;
+				// cam.gameObject.SetActive(true);
 				// AudioListener l = cam.GetComponent<AudioListener>();
 				// if( l != null )
 				// 	l.SetActive(true);
@@ -125,8 +149,10 @@ public class PlayerController : NetworkBehaviour
 		int ix = m_activeCamera + 1;
 		if( ix >= cameras.Length ) ix = 0;
 
-		cameras[m_activeCamera].gameObject.SetActive(false);
-		cameras[ix].gameObject.SetActive(true);
+		// cameras[m_activeCamera].gameObject.SetActive(false);
+		// cameras[ix].gameObject.SetActive(true);
+		cameras[ix].enabled = true;
+		cameras[m_activeCamera].enabled = false;
 		m_activeCamera = ix;
 	}
 
@@ -143,6 +169,24 @@ public class PlayerController : NetworkBehaviour
 		}
 		else {
 			Debug.Log("No weapon for " + playerName);
+		}
+	}
+
+	void changeStatusSound() {
+		// called only if status changed
+		switch(myStatus) {
+			case Status.idle:
+				soundSource.Stop();
+				break;
+			case Status.jumping:
+				soundSource.Stop();
+				break;
+			case Status.running:
+				soundSource.Play();
+				break;
+			case Status.walking:
+				soundSource.Play();
+				break;
 		}
 	}
 
@@ -164,6 +208,12 @@ public class PlayerController : NetworkBehaviour
 			ownerRot.Value = transform.rotation;
 			if( playerCamera )
 				ownerCamRot.Value = playerCamera.transform.localRotation;
+
+			if( statusChanged ) {
+				netStatus.Value = myStatus;
+				changeStatusSound();
+			}
+
 		}
 		else {
 			// Align from owner movements
@@ -171,6 +221,12 @@ public class PlayerController : NetworkBehaviour
 			transform.rotation = ownerRot.Value;
 			if(playerCamera)
 				playerCamera.transform.localRotation = ownerCamRot.Value;
+
+			Status newStatus = netStatus.Value;
+			if( newStatus != myStatus ) {
+				myStatus = newStatus;
+				changeStatusSound();
+			}
 		}
 
 	}
@@ -207,24 +263,37 @@ public class PlayerController : NetworkBehaviour
 			nextCamera();
 		}
 
-        // We are grounded, so recalculate move direction based on axes
-        Vector3 forward = transform.TransformDirection(Vector3.forward);
-        Vector3 right = transform.TransformDirection(Vector3.right);
-        // Press Left Shift to run
-        bool isRunning = Input.GetKey(KeyCode.LeftShift);
-        float curSpeedX = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Vertical") : 0;
-        float curSpeedY = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Horizontal") : 0;
-        float movementDirectionY = moveDirection.y;
-        moveDirection = (forward * curSpeedX) + (right * curSpeedY);
+		Status newStatus = myStatus;
+		float movementDirectionY = moveDirection.y;
+
+		if( newStatus != Status.jumping || characterController.isGrounded ) {
+			// We are grounded, so recalculate move direction based on axes
+			Vector3 forward = transform.TransformDirection(Vector3.forward);
+			Vector3 right = transform.TransformDirection(Vector3.right);
+			// Press Left Shift to run
+			bool isRunning = Input.GetKey(KeyCode.LeftShift);
+			newStatus = isRunning ? Status.running : Status.walking;
+			float curSpeedX = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Vertical") : 0;
+			float curSpeedY = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Horizontal") : 0;
+			
+			moveDirection = (forward * curSpeedX) + (right * curSpeedY);
+
+			if( curSpeedX == 0 && curSpeedY == 0)
+				newStatus = Status.idle;
+		}
 
         if (canJump && Input.GetButton("Jump") && canMove && characterController.isGrounded)
         {
             moveDirection.y = jumpSpeed;
+			newStatus = Status.jumping;
         }
         else
         {
             moveDirection.y = movementDirectionY;
         }
+
+		statusChanged = (newStatus != myStatus);
+		myStatus = newStatus;
 
         // Apply gravity. Gravity is multiplied by deltaTime twice (once here, and once below
         // when the moveDirection is multiplied by deltaTime). This is because gravity should be applied
@@ -273,6 +342,8 @@ public class PlayerController : NetworkBehaviour
 			if(playerCamera) {
 				GameLogic.turnOnCamera(playerCamera);
 			}
+			if(audioListener)
+				GameLogic.turnOnAudioListener(audioListener);
 		}
 	}
 

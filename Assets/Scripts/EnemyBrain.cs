@@ -20,6 +20,17 @@ public class EnemyBrain : MonoBehaviour, EnemyNavAgent.IEnemyObserver {
 	public int enemiesCount { get { return m_enemiesCount; } }
 	public int enemiesOnTarget { get { return m_enemiesOnTarget; } }
 
+	public bool noMoreKillableEnemies {
+		get {
+			int killable = agents.Count;
+			foreach( EnemyNavAgent ag in agents ) {
+				if( ag.isOnTarget )
+					killable--;
+			}
+			return killable == 0;
+		}
+	}
+
 	virtual public void add(EnemyNavAgent ag) {
 		if( ag == null ) return;
 
@@ -55,5 +66,12 @@ public class EnemyBrain : MonoBehaviour, EnemyNavAgent.IEnemyObserver {
 		m_enemiesCount = agents.Count;
 		if(listener != null)
 			listener.onEnemyKilled(m_enemiesCount);
+	}
+
+	public void clearEnemies() {
+		foreach( EnemyNavAgent ag in agents ) {
+			GameObject.Destroy(ag.gameObject);
+		}
+		agents = new List<EnemyNavAgent>();	
 	}
 }

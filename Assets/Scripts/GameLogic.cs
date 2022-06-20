@@ -15,10 +15,12 @@ public class GameLogic : NetworkBehaviour,
 	private IHUD m_hud;
 
 	public Camera lobbyCamera = null;
+	public AudioListener lobbyAudioListener = null;
 
 	public bool debugStartHorde = true;
 
-	// private int status = 0;
+	public AudioSource hordeAudioSource;
+	public AudioClip gameOverClip;
 
 	public interface IHUD {
 		void setEnemiesLeft(int n);
@@ -40,6 +42,7 @@ public class GameLogic : NetworkBehaviour,
 	private static GameLogic _instance = null;
 
 	private bool isHosted = false;
+	private bool gameOverReached = false;
 
 	[ServerRpc(RequireOwnership=false)]
 	private void spawnProjectileServerRpc(string name, Vector3 pos, Quaternion rot, float power, ulong clientId ) {
@@ -104,9 +107,18 @@ public class GameLogic : NetworkBehaviour,
 		if( _instance == null ) return;
 		if( cam == null ) return;
 
-		cam.gameObject.SetActive(true);
+		cam.enabled = true;
 
 		_instance.disableLobbyCam();
+	}
+
+	static public void turnOnAudioListener(AudioListener al) {
+		if( _instance == null ) return;
+		if( al == null ) return;
+
+		al.enabled = true;
+
+		_instance.disableLobbyAudioListener();
 	}
 
 	static public void turnOffCamera(Camera cam) {
@@ -114,18 +126,49 @@ public class GameLogic : NetworkBehaviour,
 		_instance.enableLobbyCam();
 
 		if( cam == null ) return;
-		cam.gameObject.SetActive(false);
+		cam.enabled = false;
 	}
+
+	static public void turnOffAudioListener(AudioListener al) {
+		if( _instance == null ) return;
+		if( al == null ) return;
+
+		al.enabled = false;
+		
+		_instance.enableLobbyAudioListener();
+
+	}
+
 
 	void startRound() {
 
-		if( !NetworkManager.Singleton.IsServer ) 
+		if( !NetworkManager.Singleton.IsServer )
 			return;
 
 		const float start_delay = 5f;
 		Debug.Log("Starting Game Round in " + start_delay);
+		playHordeAnnouncement(0);
 		Invoke("createHorde", start_delay);
 		Invoke("startHorde", start_delay + 1);
+	}
+
+	[ClientRpc]
+	void playHordeAnnouncementClientRpc(int soundIndex) {
+		if( !IsHost )
+			playHordeAnnouncement(soundIndex);
+	}
+
+	void playHordeAnnouncement(int soundIndex) {
+		bool isServer = NetworkManager.Singleton.IsServer;
+		if(  isServer && !IsHost )
+			// Server Only
+			return;		
+
+		if( isServer ) 
+			playHordeAnnouncementClientRpc(soundIndex);
+
+		if( hordeAudioSource != null )
+			hordeAudioSource.Play();
 	}
 
     // Start is called before the first frame update
@@ -239,32 +282,69 @@ public class GameLogic : NetworkBehaviour,
 		}
 	}
 
+	private void nextRound() {
+		if( gameOverReached ) {
+			playGameOverClip();
+			return;
+		}
+		// m_brain.clearEnemies();
+		const float nextRoundDelay = 10.0f;
+		Debug.Log($"Starting new round in {(int)nextRoundDelay} seconds");
+		Invoke("startRound", nextRoundDelay);
+	}
+
+	private void playGameOverClip() {
+		if( hordeAudioSource ) {
+			hordeAudioSource.PlayOneShot(gameOverClip);
+		}
+	}
 
 	public void onEnemyKilled(int enemiesLeft) {
 		updateHUD();
 
 		if( enemiesLeft <= 0 ) {
-		 Debug.Log( "You Win" );
+			Debug.Log( "You Win" );
 		}
+
+		if( m_brain.noMoreKillableEnemies )
+			nextRound();
 	}
 
 	public void onEnemyOnTarget(int enemiesOnTarget) {
 		updateHUD();
 
-		if( enemiesOnTarget >= enemiesToLose ) {
+		if( enemiesOnTarget >= enemiesToLose && !gameOverReached ) {
+			gameOverReached = true;
 			Debug.Log( "Game Over" );
+			playGameOverClip();
+		}
+		else {
+			if( m_brain.noMoreKillableEnemies )
+				nextRound();			
 		}
 	}
 
 	private void disableLobbyCam() {
 		if( lobbyCamera != null ) {
-			lobbyCamera.gameObject.SetActive(false);
+			lobbyCamera.enabled = false;
+		}
+	}
+
+	private void disableLobbyAudioListener() {
+		if( lobbyAudioListener != null ) {
+			lobbyAudioListener.enabled = false;
 		}
 	}
 
 	private void enableLobbyCam() {
 		if( lobbyCamera != null ) {
-			lobbyCamera.gameObject.SetActive(true);
+			lobbyCamera.enabled = true;
+		}
+	}
+
+	private void enableLobbyAudioListener() {
+		if( lobbyAudioListener != null ) {
+			lobbyAudioListener.enabled = true;
 		}
 	}
 
