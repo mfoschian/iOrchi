@@ -363,7 +363,18 @@ public class GameLogic : NetworkBehaviour,
 
 			bool ok = NetworkManager.Singleton.StartServer();
 		}
+		else if( mode == "LocalHost") {
+
+			RelayManager.Singleton.setDirectTransport();
+
+			isHosted = true;
+			StartGame();
+			activateRoundMenu("not needed");
+
+			bool ok = NetworkManager.Singleton.StartHost();
+		}
 		else if( mode == "Host") {
+			RelayManager.Singleton.setRelayTransport();
 			string _joinCode = null;
 			if( RelayManager.Singleton.IsRelayEnabled ) {
 				_joinCode = await RelayManager.Singleton.SetupRelay();

@@ -33,6 +33,12 @@ public class ConnectMenu : MonoBehaviour
 
 	}
 
+	public void StartLocalHost() {
+		Debug.Log( "Starting Local Host" );
+		if(m_listener != null)
+			m_listener.onStart("LocalHost", null);
+	}
+
 	public void StartHost() {
 		Debug.Log( "Starting Host" );
 		if(m_listener != null)

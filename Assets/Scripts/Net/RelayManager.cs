@@ -33,7 +33,51 @@ public class RelayManager : MonoBehaviour
 
     public bool IsRelayEnabled => Transport != null && Transport.Protocol == UnityTransport.ProtocolType.RelayUnityTransport;
 
-    public UnityTransport Transport => NetworkManager.Singleton.gameObject.GetComponent<UnityTransport>();
+    public UnityTransport m_transport = null;
+    // public UnityTransport Transport => NetworkManager.Singleton.gameObject.GetComponent<UnityTransport>();
+    public UnityTransport Transport {
+		get {
+			if( m_transport )
+				return m_transport;
+
+			UnityTransport[] transports = NetworkManager.Singleton.gameObject.GetComponents<UnityTransport>();
+			foreach( UnityTransport t in transports ) {
+				if( t.enabled ) {
+					m_transport = t;
+					return t;
+				}
+			}
+
+			return null;
+		}
+	}
+
+	// private void setTransport(UnityTransport.ProtocolType pt) {
+	// 	Transport.Protocol = pt;
+	// }
+	private void setTransport(UnityTransport.ProtocolType pt) {
+			UnityTransport[] transports = NetworkManager.Singleton.gameObject.GetComponents<UnityTransport>();
+			foreach( UnityTransport t in transports ) {
+				t.enabled = false;
+			}
+			foreach( UnityTransport t in transports ) {
+				if( t.Protocol == pt ) {
+					m_transport = t;
+					t.enabled = true;
+					NetworkManager.Singleton.NetworkConfig.NetworkTransport = (NetworkTransport)t;
+					m_transport = null;
+					break;
+				}
+			}
+	}
+
+	public void setRelayTransport() {
+		setTransport(UnityTransport.ProtocolType.RelayUnityTransport);
+	}
+
+	public void setDirectTransport() {
+		setTransport(UnityTransport.ProtocolType.UnityTransport);
+	}
 
 	public string Error = "";
 
