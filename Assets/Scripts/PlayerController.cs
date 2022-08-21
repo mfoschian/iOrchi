@@ -254,7 +254,7 @@ public class PlayerController : NetworkBehaviour
 				weapon.Info();
 			}
 
-			if( (Input.GetButton("Fire1") || Input.GetKeyUp(KeyCode.Space))  ) {
+			if( (Input.GetButton("Fire1"))  ) {
 				weapon.ChargeWeapon();
 			}
 		}
